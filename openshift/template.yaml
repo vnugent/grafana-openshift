@@ -1,0 +1,107 @@
+apiVersion: v1
+kind: Template
+labels:
+  template: hawkular-grafana
+metadata:
+  annotations:
+    description: Grafana with Hawkular datasource
+    iconClass: icon-app-code
+    tags: instant-app,quickstart,hawkular,grafana,prometheus
+  name: hawkular-grafana
+objects:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      description: Exposes and load balances the application pods
+    name: ${NAME}
+  spec:
+    ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+    selector:
+      name: ${NAME}
+- apiVersion: v1
+  kind: Route
+  metadata:
+    name: ${NAME}
+  spec:
+    to:
+      kind: Service
+      name: ${NAME}
+    port:
+      targetPort: http
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    annotations:
+      description: Defines how to deploy the application server
+    name: ${NAME}
+  spec:
+    replicas: 1
+    selector:
+      name: ${NAME}
+    strategy:
+      type: Rolling
+      rollingParams:
+         timeoutSeconds: 480
+    template:
+      metadata:
+        labels:
+          name: ${NAME}
+        name: ${NAME}
+      spec:
+       containers:
+        - image: vnguyen/hawkular-grafana:4.1.1
+          imagePullPolicy: Always
+          name: ${NAME}
+          ports:
+          - containerPort: 3000
+          env:
+          -
+            name: GF_SECURITY_ADMIN_PASSWORD
+            value: ${GF_SECURITY_ADMIN_PASSWORD}
+          -
+            name: GF_INSTALL_PLUGINS
+            value: ${GF_INSTALL_PLUGINS}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 120
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 5
+          resources:
+            limits:
+              memory: ${MEMORY_LIMIT}
+       volumes:
+       - name: grafana
+         emptyDir: 
+         medium: "Memory"
+parameters:
+- description: The name assigned to all of the frontend objects defined in this template.
+  displayName: Name
+  name: NAME
+  required: true
+  value: hawkular-grafana
+- description: Maximum amount of memory for the app
+  displayName: Grafana Memory Limit
+  name: MEMORY_LIMIT
+  value: 1Gi
+- description: Top Secret Password
+  displayName: Top secret password
+  name: GF_SECURITY_ADMIN_PASSWORD
+  value: "ilovetac0"
+  required: true
+- description: Comma-separated list of Grafana plugins. See also https://grafana.net/plugins
+  displayName: Grafana Plugins
+  name: GF_INSTALL_PLUGINS
+  value: "hawkular-datasource"
+  required: true

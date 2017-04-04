@@ -1,0 +1,9 @@
+#!/bin/bash
+for dir in "$@"
+do
+  if [ ! -d ${dir} ]; then
+    mkdir -p ${dir}
+  fi
+  chgrp -R 0 ${dir}
+  chmod -R g+rwX ${dir} 
+done
